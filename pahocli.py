@@ -21,52 +21,91 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 @Date June 03 2019
 '''
 # CONST MACROS
-VERSION=0.1
+VERSION="0.1.1"
 
 # Imports the paho mqtt client
 import paho.mqtt.client as mqtt
 from argparse import ArgumentParser
 import sys, time
 
+#=================================================
+# ANSI ESCAPE SEQUENCE FOR COLOR CODING
+#=================================================
+class Eseq:
+
+    normtext = "\033[m" # native color
+
+    # bright color sequences
+    # prepends these for color sequences
+    defred = "\033[0;31m"        # bright red
+    defgrn = "\033[0;32m"        # bright green
+    defyel = "\033[0;33m"        # bright yellow
+    defblu = "\033[0;34m"        # bright blue
+    defmag = "\033[0;35m"        # bright magenta
+    defcya = "\033[0;36m"        # bright cyan
+    defwht = "\033[0;37m"        # use this to go back to normal text
+
+    bolred = "\033[1;31m"        # bold red
+    bolgrn = "\033[1;32m"        # bold green
+
+    whtred = "\033[1;31;40m"    # pure red ?
+    whtgrn = "\033[1;32;40m"    # pure green ?
 
 def on_connect( client, userdata, flags, rc):
-    print("Connected with result code",str(rc))
+    print(Eseq.defgrn+"Connected"+Eseq.normtext,"with result code",str(rc))
     print(">",end="")
     sys.stdout.flush()
 
 def on_disconnect( client, userdata, rc):
-    print("Disconnected with result code",str(rc))
+    print(Eseq.defred+"Disconnected"+Eseq.normtext,"with result code",str(rc))
     print(">",end="")
     sys.stdout.flush()
 
 def on_message( client, userdata, msg):
-    print("On Message[{}]".format(msg.topic),":",msg.payload)
+    msgstr = msg.payload.decode('utf-8') #don't forget this baby
+    print("On Message["+Eseq.defblu+msg.topic+Eseq.normtext+"]:",\
+            Eseq.defcya+msgstr+Eseq.normtext)
     print(">",end="")
     sys.stdout.flush()
 
 #def on_subscribe(client, userdata, mid, granted_qos):
 
 def showHelp():
-    print("PAHOCLI version",str(VERSION))
-    print("/sub:<topic> subscribes to <topic>")
-    print("/pub:<topic> changes publish to <topic>")
-    print("/p <msg> sends msg to topic set under /pub")
-    print("/r repeats last message")
-    print("/help show this help")
-    print("/exit /quit exit the program")
+    print(Eseq.defmag+"PAHOCLI version",VERSION,Eseq.normtext)
+    print("sub <topic>     -- subscribes to <topic>")
+    print("pub <topic>     -- changes publish to <topic>")
+    print("uns <topic>     -- unsubs from <topic>")
+    print("ls              -- list all currently subscribed topics")
+    print("p <msg>         -- sends msg to topic set under pub")
+    print("r               -- repeats last message")
+    print("help            -- show this help")
+    print("exit quit q   -- exit the program")
 
 if __name__ == "__main__":
 
     # prints the logo
-    print("PAHOCLI version",str(VERSION))
-    print()
-
+    print("PAHOCLI version",VERSION," June 2019")
     # prints GNU GPL3
-    print('''pahocli.py Copyright (C) 2019 Chia Jason
-    This program comes with ABSOLUTELY NO WARRANTY; for details type `show w'.
-    This is free software, and you are welcome to redistribute it
-    under certain conditions; type `show c' for details.
-    ''')
+    print(
+'''
+pahocli.py Copyright (C) 2019 Chia Jason
+This program comes with ABSOLUTELY NO WARRANTY; 
+This is free software, and you are welcome to redistribute it
+under certain conditions;''')
+    print(
+'''
+===========================================================\\
+        /------------------\\
+        +                  |                         *  
+        + -----------------/
+        |/
+        | -------\\  |    | /-----\\            *
+        |       |]  |    | |     |
+        | ----=/ ]  |----| |     |
+        | |      ]  |    | |     |
+        | \\------/  |    | \\-----/ .... CommandlineXFACE
+===========================================================/
+''')
 
     ap = ArgumentParser()
     ap.add_argument("-b","--broker",type=str,\
@@ -96,9 +135,20 @@ if __name__ == "__main__":
     c.on_message = on_message
     #c.on_subscribe = on_subscribe
 
-    c.connect( args.broker, args.port, 60)
+    while True:
+        try:
+            c.connect( args.broker, args.port, 60)
+            break
+        except ConnectionRefusedError:
+            print("Connection refused.",args.broker, args.port)
+            time.sleep(3)
+        except Exception as e:
+            print("Unknown exception",str(e))
+            exit(1)
+
     c.loop_start()
 
+    topicls = []
     prevpub = None
     selpub = None
     try:
@@ -107,51 +157,76 @@ if __name__ == "__main__":
             uin = input(">")
             time.sleep(0.1)
             if( len(uin) == 0 ):
+                # Do nothing here.
                 continue
             else:
-                if( uin.startswith("/sub ") ):
+                #-----------------------------------------------------------
+                # Main SWITCH block
+                #-----------------------------------------------------------
+                if( uin.startswith("sub ") ):
                     # Subscribe
-                    subtopic = uin[len("/sub "):]
-                    print("Subscribing to topic:"+subtopic,end="")
+                    subtopic = uin[len("sub "):]
+                    print("Subscribing to topic:"\
+                            +Eseq.defblu+subtopic+Eseq.normtext,end="")
                     res = c.subscribe( subtopic )
                     if(res[0] == 0):
                         print("...OK")
+                        topicls.append( subtopic )
                     else:
-                        print("...ER")
+                        print("...ER",res)
 
-                elif( uin.startswith("/pub ") ):
+                elif( uin.startswith("uns ") ):
+                    subtopic = uin[len("uns "):]
+                    if subtopic in topicls:
+                        print("Unsubscribing from topic:"\
+                                +Eseq.defblu+subtopic+Eseq.normtext,end="")
+                        res = c.unsubscribe( subtopic )
+                        if(res[0] == 0):
+                            print("..."+Eseq.defgrn+"OK"+Eseq.normtext)
+                            del topicls[ topicls.index( subtopic) ]
+                        else:
+                            print("..."+Eseq.defred+"ER"+Eseq.normtext)
+                    else:
+                        print("Not subscribed to",subtopic)
+
+                elif( uin == "ls" ):
+                    print("Currently subscribed to the following topics:")
+                    for t in topicls:
+                        print(">    *",Eseq.defblu+t+Eseq.normtext)
+
+                elif( uin.startswith("pub ") ):
                     # Set publish
-                    pubtopic = uin[len("/pub "):]
-                    print("Publishing to topic:"+pubtopic)
+                    pubtopic = uin[len("pub "):]
+                    print("Publishing to topic:"+Eseq.defblu+pubtopic+Eseq.normtext)
                     selpub = pubtopic
 
-                elif( uin.startswith("/p ") ):
+                elif( uin.startswith("p ") ):
                     # Publish msg
-                    msg = uin[len("/p "):]
+                    msg = uin[len("p "):]
                     if( selpub is None ):
-                        print("Please specify publishing topic with /pub first")
+                        print("Please specify publishing topic with pub first")
                     else:
                         c.publish( selpub, msg )
                         prevpub = (selpub,msg)
 
-                elif( uin == "/r" ):
+                elif( uin == "r" ):
                     # Repeat
                     if( prevpub is None):
-                        print("No history. please publish with /p first.")
+                        print("No history. please publish with p first.")
                     else:
                         c.publish( prevpub[0], prevpub[1] )
 
-                elif( uin == "/help" ):
+                elif( uin == "help" ):
                     # Help
                     showHelp()
 
-                elif( uin == "/exit" or uin == "/quit" ):
-                    # exit
+                elif( uin == "exit" or uin == "quit" or uin == "q" ):
+                    # Exit
                     exit(0)
 
                 else:
                     # Unknown command
-                    print("Unknown command. type /help for more information")
+                    print("Unknown command. type help for more information")
             
     except KeyboardInterrupt:
         print("Keyboard Exit")
@@ -163,9 +238,6 @@ if __name__ == "__main__":
 
 
 
-
-
-    
 
 
 
