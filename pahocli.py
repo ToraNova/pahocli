@@ -1,6 +1,7 @@
+#!bin/python3
 #!/usr/bin/python3
 '''
-pahocli is a project based on PahoMQTT-Python https://pypi.org/project/paho-mqtt/ 
+pahocli is a project based on PahoMQTT-Python https://pypi.org/project/paho-mqtt/
 in hopes to realize a command line mqtt client
 
 Copyright (C) 2019  Chia Jason
@@ -74,11 +75,11 @@ def showHelp():
     print(Eseq.defmag+"PAHOCLI version",VERSION,Eseq.normtext)
     print("sub <topic>     -- subscribes to <topic>")
     print("pub <topic>     -- changes publish to <topic>")
-    print("uns <topic>     -- unsubs from <topic>")
+    print("uns <topic>     -- unsubs from <topic> (* for all)")
     print("ls              -- list all currently subscribed topics")
     print("p <msg>         -- sends msg to topic set under pub")
     print("r               -- repeats last message")
-    print("help            -- show this help")
+    print("help/?          -- show this help")
     print("exit quit q   -- exit the program")
 
 if __name__ == "__main__":
@@ -89,14 +90,14 @@ if __name__ == "__main__":
     print(
 '''
 pahocli.py Copyright (C) 2019 Chia Jason
-This program comes with ABSOLUTELY NO WARRANTY; 
+This program comes with ABSOLUTELY NO WARRANTY;
 This is free software, and you are welcome to redistribute it
 under certain conditions;''')
     print(
 '''
 ===========================================================\\
         /------------------\\
-        +                  |                         *  
+        +                  |                         *
         + -----------------/
         |/
         | -------\\  |    | /-----\\            *
@@ -177,7 +178,18 @@ under certain conditions;''')
 
                 elif( uin.startswith("uns ") ):
                     subtopic = uin[len("uns "):]
-                    if subtopic in topicls:
+                    if subtopic == "*":
+                        print("Unsubscribing all topic(s):"\
+                                +Eseq.defblu,topicls,Eseq.normtext,end="")
+                        for t in topicls:
+                            res = c.unsubscribe( t )
+                            if(res[0] == 0):
+                                print("..."+Eseq.defgrn+"OK"+Eseq.normtext)
+                                del topicls[ topicls.index( subtopic) ]
+                            else:
+                                print("..."+Eseq.defred+"ER"+Eseq.normtext)
+
+                    elif subtopic in topicls:
                         print("Unsubscribing from topic:"\
                                 +Eseq.defblu+subtopic+Eseq.normtext,end="")
                         res = c.unsubscribe( subtopic )
@@ -216,7 +228,7 @@ under certain conditions;''')
                     else:
                         c.publish( prevpub[0], prevpub[1] )
 
-                elif( uin == "help" ):
+                elif( uin == "help" or uin == "?" ):
                     # Help
                     showHelp()
 
@@ -227,14 +239,14 @@ under certain conditions;''')
                 else:
                     # Unknown command
                     print("Unknown command. type help for more information")
-            
+
     except KeyboardInterrupt:
         print("Keyboard Exit")
         exit(0)
-    except Exception as e:            
+    except Exception as e:
         print("Exception has occurred",str(e))
         exit(1)
-        
+
 
 
 
