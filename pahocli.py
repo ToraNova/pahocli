@@ -22,12 +22,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 @Date June 03 2019
 '''
 # CONST MACROS
-VERSION="0.1.1"
+VERSION="0.1.3"
 
 # Imports the paho mqtt client
 import paho.mqtt.client as mqtt
 from argparse import ArgumentParser
-import sys, time
+import sys, time, json
 
 #=================================================
 # ANSI ESCAPE SEQUENCE FOR COLOR CODING
@@ -152,6 +152,7 @@ under certain conditions;''')
     topicls = []
     prevpub = None
     selpub = None
+    mode = "str"
     try:
         while True:
 
@@ -185,9 +186,9 @@ under certain conditions;''')
                             res = c.unsubscribe( t )
                             if(res[0] == 0):
                                 print("..."+Eseq.defgrn+"OK"+Eseq.normtext)
-                                del topicls[ topicls.index( subtopic) ]
                             else:
                                 print("..."+Eseq.defred+"ER"+Eseq.normtext)
+                            topicls = []
 
                     elif subtopic in topicls:
                         print("Unsubscribing from topic:"\
