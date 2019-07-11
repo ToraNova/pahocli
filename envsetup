@@ -1,0 +1,11 @@
+#!/bin/bash
+
+skip=0
+virtualenv . || (echo "Python VirtualEnv not installed."; skip=1)
+
+if [ $skip == 0 ];then
+	echo "Setting up virtualenv"
+	. bin/activate
+	pip3 install paho-mqtt
+	deactivate
+fi
