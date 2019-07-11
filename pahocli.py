@@ -53,14 +53,18 @@ class Eseq:
     whtgrn = "\033[1;32;40m"    # pure green ?
 
 def on_connect( client, userdata, flags, rc):
-    print(Eseq.defgrn+"Connected"+Eseq.normtext,"with result code",str(rc))
-    print(">",end="")
-    sys.stdout.flush()
-    if( len(client.topicls) > 0):
-        for t in client.topicls:
-            client.subscribe(t)
-            print("Re-Subscribing to topic:"\
-                +Eseq.defblu+subtopic+Eseq.normtext,end="")
+    try:
+        print(Eseq.defgrn+"Connected"+Eseq.normtext,"with result code",str(rc))
+        if( len(client.topicls) > 0):
+            for t in client.topicls:
+                client.subscribe(t)
+                print(">"+Eseq.defgrn+"Re-Subscribing"+\
+                    Eseq.normtext+" to topic:"+\
+                    Eseq.defblu+subtopic+Eseq.normtext)
+        print(">",end="")
+        sys.stdout.flush()
+    except Exception as e:
+        print("Exception has occurred:",str(e))
 
 def on_disconnect( client, userdata, rc):
     print(Eseq.defred+"Disconnected"+Eseq.normtext,"with result code",str(rc))
