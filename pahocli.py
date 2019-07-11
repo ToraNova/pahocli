@@ -56,6 +56,11 @@ def on_connect( client, userdata, flags, rc):
     print(Eseq.defgrn+"Connected"+Eseq.normtext,"with result code",str(rc))
     print(">",end="")
     sys.stdout.flush()
+    if( len(client.topicls) > 0):
+        for t in client.topicls:
+            client.subscribe(t)
+            print("Re-Subscribing to topic:"\
+                +Eseq.defblu+subtopic+Eseq.normtext,end="")
 
 def on_disconnect( client, userdata, rc):
     print(Eseq.defred+"Disconnected"+Eseq.normtext,"with result code",str(rc))
@@ -64,8 +69,13 @@ def on_disconnect( client, userdata, rc):
 
 def on_message( client, userdata, msg):
     msgstr = msg.payload.decode('utf-8') #don't forget this baby
-    print("On Message["+Eseq.defblu+msg.topic+Eseq.normtext+"]:",\
-            Eseq.defcya+msgstr+Eseq.normtext)
+    try:
+        msgd = json.loads(msgstr)
+        print("On Message["+Eseq.defblu+msg.topic+Eseq.normtext+"]:",\
+                Eseq.defyel+str(msgd)+Eseq.normtext)
+    except Exception as e:
+        print("On Message["+Eseq.defblu+msg.topic+Eseq.normtext+"]:",\
+                Eseq.defcya+msgstr+Eseq.normtext)
     print(">",end="")
     sys.stdout.flush()
 
@@ -79,6 +89,7 @@ def showHelp():
     print("ls              -- list all currently subscribed topics")
     print("p <msg>         -- sends msg to topic set under pub")
     print("r               -- repeats last message")
+    print("j <msg>         -- test serializing with json format of msg")
     print("help/?          -- show this help")
     print("exit quit q   -- exit the program")
 
@@ -131,6 +142,7 @@ under certain conditions;''')
         c.tls_set( ca_certs = args.cafile, cert_reqs = ssl.CERT_REQUIRED,\
                 tls_version = ssl.PROTOCOL_TLS)
 
+    c.topicls = []
     c.on_connect = on_connect
     c.on_disconnect = on_disconnect
     c.on_message = on_message
@@ -149,7 +161,6 @@ under certain conditions;''')
 
     c.loop_start()
 
-    topicls = []
     prevpub = None
     selpub = None
     mode = "str"
@@ -173,7 +184,7 @@ under certain conditions;''')
                     res = c.subscribe( subtopic )
                     if(res[0] == 0):
                         print("...OK")
-                        topicls.append( subtopic )
+                        c.topicls.append( subtopic )
                     else:
                         print("...ER",res)
 
@@ -181,22 +192,22 @@ under certain conditions;''')
                     subtopic = uin[len("uns "):]
                     if subtopic == "*":
                         print("Unsubscribing all topic(s):"\
-                                +Eseq.defblu,topicls,Eseq.normtext,end="")
-                        for t in topicls:
+                                +Eseq.defblu,c.topicls,Eseq.normtext,end="")
+                        for t in c.topicls:
                             res = c.unsubscribe( t )
                             if(res[0] == 0):
                                 print("..."+Eseq.defgrn+"OK"+Eseq.normtext)
                             else:
                                 print("..."+Eseq.defred+"ER"+Eseq.normtext)
-                            topicls = []
+                            c.topicls = []
 
-                    elif subtopic in topicls:
+                    elif subtopic in c.topicls:
                         print("Unsubscribing from topic:"\
                                 +Eseq.defblu+subtopic+Eseq.normtext,end="")
                         res = c.unsubscribe( subtopic )
                         if(res[0] == 0):
                             print("..."+Eseq.defgrn+"OK"+Eseq.normtext)
-                            del topicls[ topicls.index( subtopic) ]
+                            del c.topicls[ c.topicls.index( subtopic) ]
                         else:
                             print("..."+Eseq.defred+"ER"+Eseq.normtext)
                     else:
@@ -204,7 +215,7 @@ under certain conditions;''')
 
                 elif( uin == "ls" ):
                     print("Currently subscribed to the following topics:")
-                    for t in topicls:
+                    for t in c.topicls:
                         print(">    *",Eseq.defblu+t+Eseq.normtext)
 
                 elif( uin.startswith("pub ") ):
@@ -221,6 +232,16 @@ under certain conditions;''')
                     else:
                         c.publish( selpub, msg )
                         prevpub = (selpub,msg)
+
+                elif( uin.startswith("j") ):
+                    msg = uin[len("j "):]
+                    try:
+                        tjs = json.loads(msg)
+                        print("Test Serialize"+Eseq.defyel,tjs
+                                ,Eseq.normtext)
+                    except Exception as e:
+                        print(Eseq.defred+"Exception has occurred:"+\
+                            Eseq.normtext,str(e))
 
                 elif( uin == "r" ):
                     # Repeat
