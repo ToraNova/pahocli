@@ -60,7 +60,7 @@ def on_connect( client, userdata, flags, rc):
                 client.subscribe(t)
                 print(">"+Eseq.defgrn+"Re-Subscribing"+\
                     Eseq.normtext+" to topic:"+\
-                    Eseq.defblu+subtopic+Eseq.normtext)
+                    Eseq.defblu+t+Eseq.normtext)
         print(">",end="")
         sys.stdout.flush()
     except Exception as e:
