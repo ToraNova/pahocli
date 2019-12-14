@@ -252,7 +252,8 @@ under certain conditions;''')
                     if( prevpub is None):
                         print("No history. please publish with p first.")
                     else:
-                        c.publish( prevpub[0], prevpub[1] )
+                        #c.publish( prevpub[0], prevpub[1] )
+                        c.publish( selpub, prevpub[1] )
 
                 elif( uin == "help" or uin == "?" ):
                     # Help
